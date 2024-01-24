@@ -3,5 +3,5 @@
 cmake -S ./ -B build
 cd ./build
 make
-sudo cp ./crun ~/bin
+sudo cp ./crun ~/bin/crun
 echo "Done."
