@@ -41,12 +41,12 @@ std::string find_exec_name() {
         if (content.find("add_executable") != std::string::npos)
             break;
 
-    int index = -1;
+    bool found = false;
     for (auto c : content)
     {
         if (c == ')' || c == ' ') break;
-        if (index > -1) exec_name.push_back(c);
-        if (c == '(') index = 0;
+        if (found) exec_name.push_back(c);
+        if (c == '(') found = true;
     }
 
     if (file_ptr)
@@ -83,29 +83,31 @@ bool exists_dir(std::string dir_name, std::string path)
 
 int main(int argc, char *argv[]) {
     std::filesystem::path path(std::filesystem::current_path());
-    std::string output_dir;
+    std::string output_dir = "build";
+    unsigned int index = 1;
 
     if (argc > 1)
     {
-        if (std::string(argv[1]).find("..") != std::string::npos)
-            path = path.parent_path();
-        else if (!exists_dir(std::string(argv[1]), path))
-            output_dir = argv[1];
-        else
+        if (std::string(argv[index]).find("..") != std::string::npos)
         {
-            std::filesystem::current_path(argv[1]);
+            index++;
+            path = path.parent_path();
+        }
+        else if (exists_dir(std::string(argv[index]), path))
+        {
+            std::filesystem::current_path(argv[index++]);
             path = std::filesystem::current_path();
         }
-    }
+        std::filesystem::current_path(path);
 
-    std::filesystem::current_path(path);
+        if (std::string(argv[index]).find("-t") != std::string::npos)
+            output_dir = argv[++index];
+    }
 
     std::string executable_name = find_exec_name();
     std::string build_dir = find_build_dir(path.string());
     if (build_dir == "\0")
     {
-        if (output_dir.empty())
-            output_dir = "build";
         auto cmake_build_buffer = exec(std::format("cmake -S ./ -B ./{}", output_dir));
         build_dir = output_dir;
 
@@ -114,7 +116,7 @@ int main(int argc, char *argv[]) {
             std::cout << "** CMake build failed **\n" << std::endl << cmake_build_buffer.first;
             exit(1);
         }
-    }
+    }   
 
     std::filesystem::current_path(build_dir);
     auto make_buffer = exec("make");
